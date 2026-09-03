@@ -105,6 +105,13 @@ html, body {
     box-shadow: none;
   }
   html.standalone .app__header { padding: 32px 32px 16px; }
+  html.standalone .install-callout {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin: 0 32px 18px;
+  }
+  html.standalone .install-callout__actions { flex-direction: column; }
   html.standalone .search-row { max-width: 420px; margin: 2px 32px 18px; }
   html.standalone .folder-rail { padding: 0 32px 18px; max-height: none; }
   html.standalone .prompt-list {
@@ -236,23 +243,23 @@ html, body {
 /* ---------- Install callout (dashboard only) ---------- */
 .install-callout {
   /* Default is always display:none, not just [hidden] - this only ever
-     turns on inside the @media block below (standalone + desktop width),
-     so a JS mistake can't make it show up in the extension's iframe. */
+     turns on via the html.standalone rule below, so a JS mistake can't
+     make it show up in the extension's iframe. Column layout (stacked
+     text above actions) is the default so it also reads fine narrow -
+     row layout with actions off to the side only kicks in once there's
+     room, in the desktop dashboard media block further down. */
   display: none;
+  flex-direction: column;
   flex-shrink: 0;
-  gap: 14px;
-  align-items: flex-start;
-  justify-content: space-between;
+  gap: 12px;
   margin: 0 18px 14px;
   padding: 14px 16px;
   background: var(--accent-soft);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
 }
-@media (min-width: 900px) {
-  html.standalone .install-callout:not([hidden]) {
-    display: flex;
-  }
+html.standalone .install-callout:not([hidden]) {
+  display: flex;
 }
 .install-callout__text strong {
   display: block;
@@ -282,8 +289,8 @@ html, body {
 }
 .install-callout__actions {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   flex-shrink: 0;
 }
