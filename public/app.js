@@ -232,14 +232,42 @@ function showToast(msg) {
 }
 
 // ---------- Copy / download / share / export / import ----------
+// navigator.clipboard needs a Permissions Policy grant to work inside an
+// iframe (the shared extension embeds this page in one) - the extension
+// now sets allow="clipboard-write" on it, but this still falls back to the
+// older execCommand('copy') for anywhere that grant is missing, blocked,
+// or the API is unavailable outright, instead of silently doing nothing.
+async function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (e) { /* fall through to the legacy fallback below */ }
+  }
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const ok = document.execCommand('copy');
+    textarea.remove();
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
 function copyPrompt(p) {
-  navigator.clipboard.writeText(p.text).then(() => showToast('Copied to clipboard'));
+  copyText(p.text).then(ok => showToast(ok ? 'Copied to clipboard' : 'Copy failed — select and copy the text manually'));
 }
 
 function sharePrompt(p) {
   const folder = folderById(p.folderId);
   const block = `${p.title}${folder ? ' — ' + folder.name : ''}\n\n${p.text}`;
-  navigator.clipboard.writeText(block).then(() => showToast('Share text copied'));
+  copyText(block).then(ok => showToast(ok ? 'Share text copied' : 'Copy failed — select and copy the text manually'));
 }
 
 function downloadBlob(filename, content, type) {
