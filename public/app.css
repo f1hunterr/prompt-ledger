@@ -113,7 +113,11 @@ html, body {
   }
   html.standalone .install-callout__actions { flex-direction: column; }
   html.standalone .search-row { max-width: 420px; margin: 2px 32px 18px; }
-  html.standalone .folder-rail { padding: 0 32px 18px; max-height: none; }
+  html.standalone .folder-filter-row { max-width: 420px; margin: 0 32px 14px; }
+  /* Bounded even with room to spare - unbounded here just means a big
+     client roster pushes the whole prompt grid further down the page
+     before you see any prompts, instead of scrolling its own small area. */
+  html.standalone .folder-rail { padding: 0 32px 18px; max-height: 160px; }
   html.standalone .prompt-list {
     flex: none;
     overflow: visible;
@@ -398,10 +402,41 @@ html.standalone .install-callout:not([hidden]) {
 }
 .search-row input::placeholder { color: var(--ink-faint); }
 
+/* ---------- Folder filter (only shown past FOLDER_FILTER_THRESHOLD) ---------- */
+.folder-filter-row {
+  margin: 0 18px 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.folder-filter-row[hidden] { display: none; }
+.folder-filter-row:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.folder-filter-row__icon { color: var(--ink-faint); flex-shrink: 0; }
+.folder-filter-row input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  color: var(--ink);
+}
+.folder-filter-row input::placeholder { color: var(--ink-faint); }
+
 /* ---------- Folder rail — refined pill chips, not skeuomorphic tabs ---------- */
 .folder-rail {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 6px;
   padding: 0 18px 14px;
   flex-shrink: 0;
@@ -409,6 +444,11 @@ html.standalone .install-callout:not([hidden]) {
   overflow-y: auto;
 }
 .folder-rail::-webkit-scrollbar { display: none; }
+.folder-rail__empty {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  padding: 6px 2px;
+}
 
 .folder-chip {
   position: relative;

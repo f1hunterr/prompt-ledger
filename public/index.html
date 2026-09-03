@@ -83,6 +83,12 @@
     <input id="searchInput" type="text" placeholder="Search prompts" autocomplete="off" />
   </div>
 
+  <!-- Only shown past FOLDER_FILTER_THRESHOLD clients (see renderFolderRail) -->
+  <div class="folder-filter-row" id="folderFilterRow" hidden>
+    <svg width="12" height="12" class="folder-filter-row__icon"><use href="#i-search"/></svg>
+    <input id="folderFilterInput" type="text" placeholder="Filter clients" autocomplete="off" />
+  </div>
+
   <nav class="folder-rail" id="folderRail"></nav>
 
   <main class="prompt-list" id="promptList"></main>

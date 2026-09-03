@@ -155,7 +155,8 @@ Same across all three:
 - **⋯ menu** — Export all prompts as one JSON file (backup, or hand to a
   teammate), and Import a JSON file someone shared with you.
 - Double-click a folder chip to rename it, right-click to delete it (and
-  its prompts).
+  its prompts). Folder chips list alphabetically; past 8 clients a filter
+  box appears above them so you can type instead of scanning.
 
 Web app / shared extension only:
 

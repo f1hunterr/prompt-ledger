@@ -11,12 +11,16 @@ const TAB_COLORS = ['--tab-1', '--tab-2', '--tab-3', '--tab-4', '--tab-5', '--ta
 const ALL_FOLDER_ID = '__all__';
 const OVERLAY_IDS = ['promptModalOverlay', 'folderModalOverlay', 'confirmOverlay', 'extensionModalOverlay', 'trashModalOverlay'];
 const CLOSE_ANIM_MS = 150;
+// Below this many folders, a filter box above the chip row is just clutter -
+// scanning a handful of pills is faster than typing. Past it, show one.
+const FOLDER_FILTER_THRESHOLD = 8;
 
 let state = {
   folders: [],
   prompts: [],
   activeFolderId: ALL_FOLDER_ID,
   searchQuery: '',
+  folderQuery: '',
   editingPromptId: null,
   editingFolderId: null,
   activeOverlayId: null,
@@ -66,10 +70,23 @@ function folderById(id) {
   return state.folders.find(f => f.id === id);
 }
 
+// Hash-based rather than array-position-based on purpose: folders now
+// display alphabetically (see renderFolderRail), and a position-derived
+// color would reshuffle every folder's tab color whenever one got added,
+// renamed, or deleted and the sort order shifted. Hashing the id keeps
+// each folder's color fixed for its whole lifetime regardless of how the
+// list is currently sorted or filtered.
 function folderColorVar(folderId) {
-  const idx = state.folders.findIndex(f => f.id === folderId);
-  const colorVar = TAB_COLORS[(idx < 0 ? 0 : idx) % TAB_COLORS.length];
+  let hash = 0;
+  for (let i = 0; i < folderId.length; i++) {
+    hash = (hash * 31 + folderId.charCodeAt(i)) | 0;
+  }
+  const colorVar = TAB_COLORS[Math.abs(hash) % TAB_COLORS.length];
   return `var(${colorVar})`;
+}
+
+function sortedFolders() {
+  return state.folders.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
 // ---------- Rendering ----------
@@ -88,7 +105,11 @@ function renderBrandSub() {
 
 function renderFolderRail() {
   const rail = document.getElementById('folderRail');
+  const filterRow = document.getElementById('folderFilterRow');
   rail.innerHTML = '';
+
+  filterRow.hidden = state.folders.length <= FOLDER_FILTER_THRESHOLD;
+  if (filterRow.hidden) state.folderQuery = '';
 
   const allChip = document.createElement('button');
   allChip.className = 'folder-chip' + (state.activeFolderId === ALL_FOLDER_ID ? ' active' : '');
@@ -96,11 +117,13 @@ function renderFolderRail() {
   allChip.addEventListener('click', () => { state.activeFolderId = ALL_FOLDER_ID; render(); });
   rail.appendChild(allChip);
 
-  state.folders.forEach((f, i) => {
-    const colorVar = `var(${TAB_COLORS[i % TAB_COLORS.length]})`;
+  const q = state.folderQuery.trim().toLowerCase();
+  const visible = q ? sortedFolders().filter(f => f.name.toLowerCase().includes(q)) : sortedFolders();
+
+  visible.forEach((f) => {
     const chip = document.createElement('button');
     chip.className = 'folder-chip' + (state.activeFolderId === f.id ? ' active' : '');
-    chip.innerHTML = `<span class="dot" style="background:${colorVar}"></span>${escapeHtml(f.name)}`;
+    chip.innerHTML = `<span class="dot" style="background:${folderColorVar(f.id)}"></span>${escapeHtml(f.name)}`;
     chip.title = 'Click to filter · Double-click to rename · Right-click to delete';
     chip.addEventListener('click', () => { state.activeFolderId = f.id; render(); });
     chip.addEventListener('dblclick', (e) => {
@@ -117,6 +140,13 @@ function renderFolderRail() {
     });
     rail.appendChild(chip);
   });
+
+  if (q && visible.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'folder-rail__empty';
+    empty.textContent = 'No matching clients';
+    rail.appendChild(empty);
+  }
 
   const addChip = document.createElement('button');
   addChip.className = 'folder-chip folder-chip--add';
@@ -215,7 +245,7 @@ function renderFolderSelectOptions() {
     return;
   }
   select.disabled = false;
-  state.folders.forEach(f => {
+  sortedFolders().forEach(f => {
     const opt = document.createElement('option');
     opt.value = f.id;
     opt.textContent = f.name;
@@ -673,6 +703,11 @@ function init() {
   document.getElementById('searchInput').addEventListener('input', (e) => {
     state.searchQuery = e.target.value;
     renderPromptList();
+  });
+
+  document.getElementById('folderFilterInput').addEventListener('input', (e) => {
+    state.folderQuery = e.target.value;
+    renderFolderRail();
   });
 
   const menuBtn = document.getElementById('menuBtn');
