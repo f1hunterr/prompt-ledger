@@ -23,6 +23,15 @@
   <span class="bar__label" id="urlLabel"></span>
   <button class="bar__btn" id="settingsBtn" title="Change server" type="button">⚙</button>
 </div>
+
+<div class="update-notice" id="updateNotice" hidden>
+  <span>A newer version of this extension is available.</span>
+  <a href="#" target="_blank" rel="noopener">Download it</a>, then re-extract
+  over the same folder and click the reload icon next to Prompt Ledger in
+  <code>chrome://extensions</code>.
+  <button id="dismissUpdateNoticeBtn" type="button" title="Dismiss">×</button>
+</div>
+
 <iframe id="frame" hidden allow="clipboard-write"></iframe>
 
 <script src="sidepanel.js"></script>

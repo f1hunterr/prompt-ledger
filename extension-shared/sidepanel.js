@@ -1,8 +1,10 @@
 const STORAGE_KEY = 'serverUrl';
-// Replaced with a real URL by the server when downloaded via /extension.zip.
-// Loading this folder unpacked straight from git leaves it untouched, so
-// the setup screen still asks for a server address as before.
+// Both replaced with real values by the server when downloaded via
+// /extension.zip. Loading this folder unpacked straight from git leaves
+// them untouched, so the setup screen still asks for a server address and
+// the update check below never fires for a raw git checkout.
 const BUNDLED_SERVER_URL = '__DEFAULT_SERVER_URL__';
+const CURRENT_EXTENSION_VERSION = '__EXTENSION_VERSION__';
 
 function normalizeUrl(raw) {
   let url = raw.trim();
@@ -27,6 +29,29 @@ function showFrame(url) {
   frame.src = url;
   frame.hidden = false;
   document.getElementById('urlLabel').textContent = url.replace(/^https?:\/\//, '');
+  checkForExtensionUpdate(url);
+}
+
+// Chrome has no update mechanism at all for a "Load unpacked" extension -
+// this can only ever notify, never auto-install. Skipped entirely for a
+// raw git checkout (CURRENT_EXTENSION_VERSION still the literal
+// placeholder), since there's nothing meaningful to compare against.
+const EXTENSION_UPDATE_CHECK_MS = 30 * 60 * 1000;
+
+async function checkForExtensionUpdate(serverUrl) {
+  if (CURRENT_EXTENSION_VERSION === '__EXTENSION_VERSION__') return;
+  try {
+    const res = await fetch(`${serverUrl}/api/extension-version`, { credentials: 'omit' });
+    if (!res.ok) return;
+    const { version } = await res.json();
+    if (version && version !== CURRENT_EXTENSION_VERSION) {
+      const notice = document.getElementById('updateNotice');
+      notice.querySelector('a').href = `${serverUrl}/extension.zip`;
+      notice.hidden = false;
+    }
+  } catch (e) {
+    // Offline or server unreachable - not worth surfacing, just retry later.
+  }
 }
 
 function connect() {
@@ -49,6 +74,10 @@ document.getElementById('settingsBtn').addEventListener('click', () => {
   chrome.storage.sync.get([STORAGE_KEY], (res) => showSetup(res[STORAGE_KEY] || ''));
 });
 
+document.getElementById('dismissUpdateNoticeBtn').addEventListener('click', () => {
+  document.getElementById('updateNotice').hidden = true;
+});
+
 chrome.storage.sync.get([STORAGE_KEY], (res) => {
   if (res[STORAGE_KEY]) {
     showFrame(res[STORAGE_KEY]);
@@ -58,3 +87,9 @@ chrome.storage.sync.get([STORAGE_KEY], (res) => {
     showSetup('');
   }
 });
+
+setInterval(() => {
+  chrome.storage.sync.get([STORAGE_KEY], (res) => {
+    if (res[STORAGE_KEY]) checkForExtensionUpdate(res[STORAGE_KEY]);
+  });
+}, EXTENSION_UPDATE_CHECK_MS);

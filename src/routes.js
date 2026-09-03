@@ -13,10 +13,26 @@ const NAME_MAX = 200;
 
 const EXTENSION_DIR = path.join(__dirname, '..', 'extension-shared');
 const SERVER_URL_PLACEHOLDER = '__DEFAULT_SERVER_URL__';
+const EXTENSION_VERSION_PLACEHOLDER = '__EXTENSION_VERSION__';
 // Changes every time this process starts (a redeploy, a plain restart, a
 // crash recovery), which is exactly what the client-side update banner
 // wants to detect - no manual version bumping to remember.
 const STARTED_AT = Date.now();
+
+// A stable fingerprint of the extension's own source files (not the
+// server app's). A previously-downloaded copy of extension-shared/ bakes
+// this in at zip-build time (see /extension.zip below) and compares it
+// against GET /api/extension-version, so the extension's own side panel
+// can tell the user "there's a newer version of me" - Chrome has no
+// update mechanism at all for a "Load unpacked" extension, so this is
+// only ever a notice, never an automatic install.
+function computeExtensionVersion() {
+  const files = ['manifest.json', 'background.js', 'sidepanel.html', 'sidepanel.css', 'sidepanel.js'];
+  const hash = crypto.createHash('sha256');
+  files.forEach((name) => hash.update(fs.readFileSync(path.join(EXTENSION_DIR, name))));
+  return hash.digest('hex').slice(0, 12);
+}
+const EXTENSION_VERSION = computeExtensionVersion();
 
 function mapFolder(row) {
   return { id: row.id, name: row.name, createdAt: row.created_at, deletedAt: row.deleted_at ?? null };
@@ -53,12 +69,17 @@ router.get('/api/version', (req, res) => {
   res.json({ startedAt: STARTED_AT });
 });
 
+router.get('/api/extension-version', (req, res) => {
+  res.json({ version: EXTENSION_VERSION });
+});
+
 // ---------- Pre-configured Chrome extension download ----------
 router.get('/extension.zip', (req, res) => {
   const origin = `${req.protocol}://${req.get('host')}`;
   const sidepanelJs = fs
     .readFileSync(path.join(EXTENSION_DIR, 'sidepanel.js'), 'utf8')
-    .replace(SERVER_URL_PLACEHOLDER, origin);
+    .replace(SERVER_URL_PLACEHOLDER, origin)
+    .replace(EXTENSION_VERSION_PLACEHOLDER, EXTENSION_VERSION);
 
   res.attachment('prompt-ledger-extension.zip');
   const archive = archiver('zip', { zlib: { level: 9 } });

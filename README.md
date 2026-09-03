@@ -58,7 +58,8 @@ build step, no extra services). Defaults to port 3000, override with
 
 ### API
 
-`GET /health`, `GET /api/version`, `GET /api/data`, `GET/POST /api/folders`,
+`GET /health`, `GET /api/version`, `GET /api/extension-version`,
+`GET /api/data`, `GET/POST /api/folders`,
 `DELETE /api/folders/:id`, `GET/POST /api/prompts`,
 `PUT/DELETE /api/prompts/:id`, `GET /api/export`, `POST /api/import`,
 `GET /api/trash`, `POST /api/trash/folders/:id/restore`,
@@ -110,6 +111,20 @@ there's nothing to type in.
 6. Click the toolbar icon — it opens already connected. Pin it via the
    puzzle-piece icon for one-click access. Click the ⚙ in the panel's top
    bar any time to point it at a different server.
+
+### Updating the extension
+
+Chrome has no update mechanism at all for a "Load unpacked" extension —
+not a platform gap this project can close, it's a deliberate restriction
+(only Chrome Web Store or enterprise-managed force-install get real
+auto-update). What it does have: the panel itself notices when a newer
+version exists and tells you. Each download bakes in a fingerprint of the
+extension's own source (`GET /api/extension-version`, hashed server-side
+from `extension-shared/`); the panel checks that against the live server
+every 30 minutes; if they differ, a banner appears in the panel with a
+download link. To actually update: download it, **extract over the same
+folder** (don't pick a new location), then click the small reload icon
+next to Prompt Ledger on `chrome://extensions` — no remove-and-reinstall.
 
 ## Offline extension — install (unpacked, ~30 seconds)
 
