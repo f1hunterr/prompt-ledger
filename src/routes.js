@@ -13,6 +13,10 @@ const NAME_MAX = 200;
 
 const EXTENSION_DIR = path.join(__dirname, '..', 'extension-shared');
 const SERVER_URL_PLACEHOLDER = '__DEFAULT_SERVER_URL__';
+// Changes every time this process starts (a redeploy, a plain restart, a
+// crash recovery), which is exactly what the client-side update banner
+// wants to detect - no manual version bumping to remember.
+const STARTED_AT = Date.now();
 
 function mapFolder(row) {
   return { id: row.id, name: row.name, createdAt: row.created_at, deletedAt: row.deleted_at ?? null };
@@ -43,6 +47,10 @@ router.get('/health', (req, res) => {
   } catch (e) {
     res.status(500).json({ status: 'error' });
   }
+});
+
+router.get('/api/version', (req, res) => {
+  res.json({ startedAt: STARTED_AT });
 });
 
 // ---------- Pre-configured Chrome extension download ----------

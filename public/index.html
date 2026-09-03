@@ -20,9 +20,19 @@
   <symbol id="i-close" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
   <symbol id="i-more" viewBox="0 0 20 20"><circle cx="10" cy="4.5" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="15.5" r="1.3" fill="currentColor"/></symbol>
   <symbol id="i-restore" viewBox="0 0 20 20"><path d="M4 10a6 6 0 106-6M4 10V5m0 5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 20 20"><path d="M10 13V4m0 0L6.8 7.2M10 4l3.2 3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14.5v1.3A1.2 1.2 0 005.2 17h9.6a1.2 1.2 0 001.2-1.2v-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
 </svg>
 
 <div class="app" id="app">
+
+  <!-- First child on purpose: .app is a bounded-height flex column (fills
+       the viewport in the compact panel view), so this needs to take its
+       height out of that same budget rather than sit outside .app and
+       push the whole thing taller than the viewport. -->
+  <div class="update-banner" id="updateBanner" hidden>
+    <span>A new version of Prompt Ledger is running on the server.</span>
+    <button id="refreshUpdateBtn" type="button">Refresh to update</button>
+  </div>
 
   <header class="app__header">
     <div class="brand">
@@ -38,13 +48,35 @@
       </button>
     </div>
     <div class="menu" id="toolsMenu" hidden>
-      <button id="getExtensionBtn">Get Chrome extension</button>
-      <button id="exportAllBtn">Export all as JSON</button>
-      <button id="importBtn">Import JSON</button>
+      <button id="getExtensionBtn"><svg width="14" height="14"><use href="#i-share"/></svg> Get Chrome extension</button>
+      <button id="exportAllBtn"><svg width="14" height="14"><use href="#i-download"/></svg> Export all as JSON</button>
+      <button id="importBtn"><svg width="14" height="14"><use href="#i-upload"/></svg> Import JSON</button>
       <input type="file" id="importFile" accept="application/json" hidden />
-      <button id="trashBtn">Recycle bin</button>
+      <button id="trashBtn"><svg width="14" height="14"><use href="#i-trash"/></svg> Recycle bin</button>
     </div>
   </header>
+
+  <!-- Dashboard-only: same install steps as the "Get Chrome extension"
+       modal, shown inline instead of behind a click. Dismissible; stays
+       dismissed via localStorage. Hidden entirely inside the extension's
+       own side panel (nothing in .standalone-only content shows there). -->
+  <div class="install-callout" id="installCallout" hidden>
+    <div class="install-callout__text">
+      <strong>Get the Chrome extension</strong>
+      <p>Docks this library into Chrome's side panel — pre-connected to this server, nothing to type in.</p>
+      <ol>
+        <li>Download the extension below, then unzip it.</li>
+        <li>Open <code>chrome://extensions</code>, turn on <strong>Developer mode</strong>.</li>
+        <li>Click <strong>Load unpacked</strong>, select the unzipped folder.</li>
+      </ol>
+    </div>
+    <div class="install-callout__actions">
+      <a class="btn btn--primary" href="/extension.zip" download>Download extension (.zip)</a>
+      <button class="icon-btn" id="dismissInstallCalloutBtn" title="Dismiss" type="button">
+        <svg width="14" height="14"><use href="#i-close"/></svg>
+      </button>
+    </div>
+  </div>
 
   <div class="search-row">
     <svg width="15" height="15" class="search-row__icon"><use href="#i-search"/></svg>

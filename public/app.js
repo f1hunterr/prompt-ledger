@@ -56,7 +56,8 @@ const api = {
   restorePrompt: (id) => apiRequest('POST', `/api/trash/prompts/${id}/restore`),
   purgeFolder: (id) => apiRequest('DELETE', `/api/trash/folders/${id}`),
   purgePrompt: (id) => apiRequest('DELETE', `/api/trash/prompts/${id}`),
-  emptyTrash: () => apiRequest('POST', '/api/trash/empty')
+  emptyTrash: () => apiRequest('POST', '/api/trash/empty'),
+  getVersion: () => apiRequest('GET', '/api/version')
 };
 
 function folderById(id) {
@@ -553,6 +554,33 @@ function confirmPurgePrompt(prompt) {
   });
 }
 
+// ---------- Update check ----------
+let knownServerVersion = null;
+const UPDATE_CHECK_MS = 5 * 60 * 1000;
+
+async function checkForUpdate() {
+  try {
+    const { startedAt } = await api.getVersion();
+    if (knownServerVersion === null) {
+      knownServerVersion = startedAt;
+    } else if (startedAt !== knownServerVersion) {
+      document.getElementById('updateBanner').hidden = false;
+    }
+  } catch (e) {
+    // Silent - a background check failing once isn't worth a toast, and
+    // it just retries on the next interval.
+  }
+}
+
+// ---------- Install callout (dashboard only) ----------
+const INSTALL_CALLOUT_DISMISSED_KEY = 'promptledger.installCalloutDismissed';
+
+function initInstallCallout() {
+  if (!document.documentElement.classList.contains('standalone')) return;
+  if (localStorage.getItem(INSTALL_CALLOUT_DISMISSED_KEY)) return;
+  document.getElementById('installCallout').hidden = false;
+}
+
 async function loadAndRender() {
   const data = await api.getData();
   state.folders = data.folders;
@@ -656,6 +684,17 @@ function init() {
       }
     });
   });
+
+  document.getElementById('refreshUpdateBtn').addEventListener('click', () => location.reload());
+
+  document.getElementById('dismissInstallCalloutBtn').addEventListener('click', () => {
+    document.getElementById('installCallout').hidden = true;
+    localStorage.setItem(INSTALL_CALLOUT_DISMISSED_KEY, '1');
+  });
+  initInstallCallout();
+
+  checkForUpdate();
+  setInterval(checkForUpdate, UPDATE_CHECK_MS);
 
   loadAndRender().catch((e) => showToast(e.message || 'Could not load prompts'));
 }

@@ -7,12 +7,19 @@ client, ready to copy, download, or share. Ships three ways:
   everyone on the team hits the same URL and sees the same library. No
   accounts — anyone who can reach the URL can view and edit it, so keep it
   on a LAN/VPN rather than the open internet. Visited directly in a
-  browser at desktop width, it lays out as a wide dashboard (grid of
-  prompt cards, floating "New prompt" button); docked in the shared
-  extension's side panel, it's the same compact single-column view as
-  before — same page, detected automatically (`window.self === window.top`
-  tells it whether it's the top-level page or sitting in the extension's
-  iframe), no separate build.
+  browser at desktop width, it lays out as a wide dashboard: the ⋯ menu
+  (export/import/recycle bin/get-extension) sits as a visible toolbar row
+  under the header instead of a hidden dropdown, a grid of prompt cards
+  replaces the single column, and a dismissible callout with the Chrome
+  extension install steps sits right on the page. Docked in the shared
+  extension's side panel, it's the same compact single-column view (⋯
+  dropdown included) as before — same page, detected automatically
+  (`window.self === window.top` tells it whether it's the top-level page
+  or sitting in the extension's iframe), no separate build. Either way, a
+  banner appears if the server gets redeployed while your tab is open
+  ("Refresh to update") — no page-reload polling library, just a
+  timestamp captured at server start (`GET /api/version`) that the page
+  compares every few minutes.
 - **Shared side-panel extension** (`extension-shared/`) — a thin Chrome
   extension that docks the web app above in a side panel, so it opens
   from the toolbar instead of a bookmarked tab. Same shared data — it's
@@ -51,7 +58,7 @@ build step, no extra services). Defaults to port 3000, override with
 
 ### API
 
-`GET /health`, `GET /api/data`, `GET/POST /api/folders`,
+`GET /health`, `GET /api/version`, `GET /api/data`, `GET/POST /api/folders`,
 `DELETE /api/folders/:id`, `GET/POST /api/prompts`,
 `PUT/DELETE /api/prompts/:id`, `GET /api/export`, `POST /api/import`,
 `GET /api/trash`, `POST /api/trash/folders/:id/restore`,

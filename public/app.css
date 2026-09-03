@@ -203,6 +203,92 @@ html, body {
 }
 .icon-btn:active { transform: scale(0.92); }
 
+/* ---------- Update banner ---------- */
+.update-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+.update-banner[hidden] { display: none; }
+.update-banner button {
+  border: none;
+  background: var(--accent);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.update-banner button:hover { background: var(--accent-ink); }
+
+/* ---------- Install callout (dashboard only) ---------- */
+.install-callout {
+  /* Default is always display:none, not just [hidden] - this only ever
+     turns on inside the @media block below (standalone + desktop width),
+     so a JS mistake can't make it show up in the extension's iframe. */
+  display: none;
+  flex-shrink: 0;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 0 18px 14px;
+  padding: 14px 16px;
+  background: var(--accent-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+@media (min-width: 900px) {
+  html.standalone .install-callout:not([hidden]) {
+    display: flex;
+  }
+}
+.install-callout__text strong {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+.install-callout__text p {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.install-callout__text ol {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+.install-callout__text code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--surface);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.install-callout__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.install-callout__actions .btn { white-space: nowrap; }
+
 .menu {
   position: absolute;
   top: 54px;
@@ -222,7 +308,9 @@ html, body {
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 .menu button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   text-align: left;
   padding: 9px 11px;
@@ -235,8 +323,43 @@ html, body {
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
+.menu button svg { flex-shrink: 0; color: var(--ink-faint); }
 @media (hover: hover) and (pointer: fine) {
   .menu button:hover { background: var(--accent-soft); color: var(--accent-ink); }
+  .menu button:hover svg { color: var(--accent-ink); }
+}
+
+/* Dashboard-only: the same buttons above, restyled from a dropdown list
+   into an always-visible toolbar row. html.standalone .menu[hidden] is
+   needed too - without it the browser's built-in [hidden]{display:none}
+   (higher specificity than a bare .menu rule) would still hide it whenever
+   app.js's existing dropdown-toggle logic sets menu.hidden = true, which
+   still runs unchanged since the extension's compact view needs it. */
+@media (min-width: 900px) {
+  html.standalone .menu,
+  html.standalone .menu[hidden] {
+    display: flex;
+    flex-wrap: wrap;
+    position: static;
+    flex-basis: 100%;
+    margin-top: 16px;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: none;
+    min-width: 0;
+    animation: none;
+    gap: 8px;
+  }
+  html.standalone #menuBtn { display: none; }
+  html.standalone .app__header { flex-wrap: wrap; }
+  html.standalone .menu button {
+    width: auto;
+    padding: 8px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface);
+  }
 }
 
 /* ---------- Search ---------- */
