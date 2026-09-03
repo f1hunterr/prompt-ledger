@@ -139,7 +139,8 @@ Same across all three:
 - **Search bar** — searches titles and prompt text across all folders.
 - **⋯ menu** — Export all prompts as one JSON file (backup, or hand to a
   teammate), and Import a JSON file someone shared with you.
-- Right-click a folder chip to delete that folder (and its prompts).
+- Double-click a folder chip to rename it, right-click to delete it (and
+  its prompts).
 
 Web app / shared extension only:
 

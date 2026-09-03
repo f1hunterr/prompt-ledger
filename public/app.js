@@ -18,6 +18,7 @@ let state = {
   activeFolderId: ALL_FOLDER_ID,
   searchQuery: '',
   editingPromptId: null,
+  editingFolderId: null,
   activeOverlayId: null,
   _confirmHandler: null
 };
@@ -45,6 +46,7 @@ async function apiRequest(method, url, body) {
 const api = {
   getData: () => apiRequest('GET', '/api/data'),
   createFolder: (name) => apiRequest('POST', '/api/folders', { name }),
+  renameFolder: (id, name) => apiRequest('PUT', `/api/folders/${id}`, { name }),
   deleteFolder: (id) => apiRequest('DELETE', `/api/folders/${id}`),
   createPrompt: (p) => apiRequest('POST', '/api/prompts', p),
   updatePrompt: (id, p) => apiRequest('PUT', `/api/prompts/${id}`, p),
@@ -99,7 +101,12 @@ function renderFolderRail() {
     const chip = document.createElement('button');
     chip.className = 'folder-chip' + (state.activeFolderId === f.id ? ' active' : '');
     chip.innerHTML = `<span class="dot" style="background:${colorVar}"></span>${escapeHtml(f.name)}`;
+    chip.title = 'Click to filter · Double-click to rename · Right-click to delete';
     chip.addEventListener('click', () => { state.activeFolderId = f.id; render(); });
+    chip.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      openFolderModal(f);
+    });
     chip.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       openConfirm({
@@ -115,7 +122,7 @@ function renderFolderRail() {
   addChip.className = 'folder-chip folder-chip--add';
   addChip.innerHTML = '<svg width="11" height="11"><use href="#i-plus"/></svg> Client';
   addChip.title = 'New client folder';
-  addChip.addEventListener('click', openFolderModal);
+  addChip.addEventListener('click', () => openFolderModal(null));
   rail.appendChild(addChip);
 }
 
@@ -412,8 +419,11 @@ async function savePromptFromModal() {
 }
 
 // ---------- Folder modal ----------
-function openFolderModal() {
-  document.getElementById('folderNameInput').value = '';
+function openFolderModal(existing) {
+  state.editingFolderId = existing ? existing.id : null;
+  document.getElementById('folderModalTitle').textContent = existing ? 'Rename client folder' : 'New client folder';
+  document.getElementById('saveFolderBtn').textContent = existing ? 'Save changes' : 'Create folder';
+  document.getElementById('folderNameInput').value = existing ? existing.name : '';
   openOverlay('folderModalOverlay');
   document.getElementById('folderNameInput').focus();
 }
@@ -425,9 +435,15 @@ async function saveFolderFromModal() {
   const saveBtn = document.getElementById('saveFolderBtn');
   saveBtn.disabled = true;
   try {
-    const folder = await api.createFolder(name);
-    state.folders.push(folder);
-    state.activeFolderId = folder.id;
+    if (state.editingFolderId) {
+      const updated = await api.renameFolder(state.editingFolderId, name);
+      const idx = state.folders.findIndex(f => f.id === state.editingFolderId);
+      if (idx !== -1) state.folders[idx] = updated;
+    } else {
+      const folder = await api.createFolder(name);
+      state.folders.push(folder);
+      state.activeFolderId = folder.id;
+    }
     closeOverlay('folderModalOverlay');
     render();
   } catch (e) {

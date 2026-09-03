@@ -90,6 +90,17 @@ router.post('/api/folders', (req, res) => {
   res.status(201).json(mapFolder(row));
 });
 
+router.put('/api/folders/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM folders WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Folder not found' });
+
+  const name = cleanString(req.body.name, NAME_MAX);
+  if (!name) return res.status(400).json({ error: 'Folder name required' });
+
+  db.prepare('UPDATE folders SET name = ? WHERE id = ?').run(name, req.params.id);
+  res.json(mapFolder({ ...existing, name }));
+});
+
 router.delete('/api/folders/:id', (req, res) => {
   const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!folder) return res.status(404).json({ error: 'Folder not found' });
