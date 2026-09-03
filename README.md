@@ -47,7 +47,10 @@ build step, no extra services). Defaults to port 3000, override with
 
 `GET /health`, `GET /api/data`, `GET/POST /api/folders`,
 `DELETE /api/folders/:id`, `GET/POST /api/prompts`,
-`PUT/DELETE /api/prompts/:id`, `GET /api/export`, `POST /api/import`.
+`PUT/DELETE /api/prompts/:id`, `GET /api/export`, `POST /api/import`,
+`GET /api/trash`, `POST /api/trash/folders/:id/restore`,
+`POST /api/trash/prompts/:id/restore`, `DELETE /api/trash/folders/:id`,
+`DELETE /api/trash/prompts/:id`, `POST /api/trash/empty`.
 All plain JSON, no auth headers required. `GET /extension.zip` serves
 the shared extension below, pre-configured with this server's address.
 
@@ -104,7 +107,19 @@ Same across all three:
   teammate), and Import a JSON file someone shared with you.
 - Right-click a folder chip to delete that folder (and its prompts).
 
-Offline extension only: the **✕ button** closes the side panel.
+Web app / shared extension only:
+
+- Deleting a folder or prompt moves it to the **Recycle bin** (⋯ menu)
+  instead of destroying it right away. From there you can **restore** it
+  or **delete forever**. Restoring a folder also restores whatever
+  prompts were in it when it was deleted. Emptying the bin, or deleting
+  something forever from it, can't be undone.
+
+Offline extension only:
+
+- Deleting a folder or prompt is immediate and permanent — no recycle
+  bin, since there's no server keeping a copy.
+- The **✕ button** closes the side panel.
 
 ## What changed from the popup version
 

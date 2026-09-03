@@ -28,4 +28,21 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_prompts_folder_id ON prompts(folder_id);
 `);
 
+// Added after the tables above already shipped, so existing databases need
+// this column bolted on rather than created fresh — CREATE TABLE IF NOT
+// EXISTS above is a no-op on a database that already has these tables.
+function ensureColumn(table, column, type) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+}
+ensureColumn('folders', 'deleted_at', 'INTEGER');
+ensureColumn('prompts', 'deleted_at', 'INTEGER');
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_folders_deleted_at ON folders(deleted_at);
+  CREATE INDEX IF NOT EXISTS idx_prompts_deleted_at ON prompts(deleted_at);
+`);
+
 module.exports = { db, DATA_DIR };

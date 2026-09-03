@@ -1,6 +1,6 @@
 const TAB_COLORS = ['--tab-1', '--tab-2', '--tab-3', '--tab-4', '--tab-5', '--tab-6'];
 const ALL_FOLDER_ID = '__all__';
-const OVERLAY_IDS = ['promptModalOverlay', 'folderModalOverlay', 'confirmOverlay', 'extensionModalOverlay'];
+const OVERLAY_IDS = ['promptModalOverlay', 'folderModalOverlay', 'confirmOverlay', 'extensionModalOverlay', 'trashModalOverlay'];
 const CLOSE_ANIM_MS = 150;
 
 let state = {
@@ -41,7 +41,13 @@ const api = {
   updatePrompt: (id, p) => apiRequest('PUT', `/api/prompts/${id}`, p),
   deletePrompt: (id) => apiRequest('DELETE', `/api/prompts/${id}`),
   exportAll: () => apiRequest('GET', '/api/export'),
-  importJson: (payload) => apiRequest('POST', '/api/import', payload)
+  importJson: (payload) => apiRequest('POST', '/api/import', payload),
+  getTrash: () => apiRequest('GET', '/api/trash'),
+  restoreFolder: (id) => apiRequest('POST', `/api/trash/folders/${id}/restore`),
+  restorePrompt: (id) => apiRequest('POST', `/api/trash/prompts/${id}/restore`),
+  purgeFolder: (id) => apiRequest('DELETE', `/api/trash/folders/${id}`),
+  purgePrompt: (id) => apiRequest('DELETE', `/api/trash/prompts/${id}`),
+  emptyTrash: () => apiRequest('POST', '/api/trash/empty')
 };
 
 function folderById(id) {
@@ -88,7 +94,7 @@ function renderFolderRail() {
       e.preventDefault();
       openConfirm({
         title: `Delete "${f.name}"?`,
-        body: 'Prompts saved in this folder will be deleted too. This can’t be undone.',
+        body: 'Prompts saved in this folder move to the Recycle bin too. You can restore them from there.',
         onConfirm: () => deleteFolder(f.id)
       });
     });
@@ -172,7 +178,7 @@ function renderPromptList() {
     card.querySelector('[data-action="delete"]').addEventListener('click', () => {
       openConfirm({
         title: `Delete "${p.title}"?`,
-        body: 'This can’t be undone.',
+        body: 'Moves to the Recycle bin — you can restore it from there.',
         onConfirm: () => deletePrompt(p.id)
       });
     });
@@ -402,6 +408,142 @@ function openConfirm({ title, body, onConfirm }) {
   openOverlay('confirmOverlay');
 }
 
+// ---------- Recycle bin ----------
+function timeAgo(ts) {
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+async function openTrashModal() {
+  openOverlay('trashModalOverlay');
+  await renderTrashList();
+}
+
+async function renderTrashList() {
+  const listEl = document.getElementById('trashList');
+  listEl.innerHTML = '<p class="modal__body-text">Loading…</p>';
+  let trash;
+  try {
+    trash = await api.getTrash();
+  } catch (e) {
+    listEl.innerHTML = '';
+    showToast(e.message || 'Could not load recycle bin');
+    return;
+  }
+
+  listEl.innerHTML = '';
+  if (trash.folders.length === 0 && trash.prompts.length === 0) {
+    listEl.innerHTML = '<p class="trash-empty-hint">Recycle bin is empty.</p>';
+    return;
+  }
+
+  if (trash.folders.length > 0) {
+    listEl.appendChild(renderTrashSection('Folders', trash.folders.map(f => ({
+      id: f.id,
+      name: f.name,
+      deletedAt: f.deletedAt,
+      onRestore: () => restoreTrashedFolder(f.id),
+      onPurge: () => confirmPurgeFolder(f)
+    }))));
+  }
+
+  if (trash.prompts.length > 0) {
+    listEl.appendChild(renderTrashSection('Prompts', trash.prompts.map(p => ({
+      id: p.id,
+      name: p.title,
+      deletedAt: p.deletedAt,
+      onRestore: () => restoreTrashedPrompt(p.id),
+      onPurge: () => confirmPurgePrompt(p)
+    }))));
+  }
+}
+
+function renderTrashSection(title, items) {
+  const section = document.createElement('div');
+  section.className = 'trash-section';
+  section.innerHTML = `<p class="trash-section__title">${escapeHtml(title)}</p>`;
+
+  const rows = document.createElement('div');
+  rows.className = 'trash-section__rows';
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'trash-row';
+    row.innerHTML = `
+      <div class="trash-row__info">
+        <span class="trash-row__name">${escapeHtml(item.name)}</span><br>
+        <span class="trash-row__meta">Deleted ${timeAgo(item.deletedAt)}</span>
+      </div>
+      <div class="trash-row__actions">
+        <button data-action="restore" title="Restore"><svg width="14" height="14"><use href="#i-restore"/></svg></button>
+        <button data-action="purge" class="danger" title="Delete forever"><svg width="14" height="14"><use href="#i-trash"/></svg></button>
+      </div>
+    `;
+    row.querySelector('[data-action="restore"]').addEventListener('click', item.onRestore);
+    row.querySelector('[data-action="purge"]').addEventListener('click', item.onPurge);
+    rows.appendChild(row);
+  });
+  section.appendChild(rows);
+  return section;
+}
+
+async function restoreTrashedFolder(id) {
+  try {
+    await api.restoreFolder(id);
+    showToast('Folder restored');
+  } catch (e) {
+    showToast(e.message || 'Restore failed');
+  }
+  await Promise.all([loadAndRender(), renderTrashList()]);
+}
+
+async function restoreTrashedPrompt(id) {
+  try {
+    await api.restorePrompt(id);
+    showToast('Prompt restored');
+  } catch (e) {
+    showToast(e.message || 'Restore failed');
+  }
+  await Promise.all([loadAndRender(), renderTrashList()]);
+}
+
+function confirmPurgeFolder(folder) {
+  openConfirm({
+    title: `Delete "${folder.name}" forever?`,
+    body: 'Permanently removes the folder and everything still in the bin from it. This can’t be undone.',
+    onConfirm: async () => {
+      try {
+        await api.purgeFolder(folder.id);
+        showToast('Folder deleted forever');
+      } catch (e) {
+        showToast(e.message || 'Delete failed');
+      }
+      openOverlay('trashModalOverlay');
+      await renderTrashList();
+    }
+  });
+}
+
+function confirmPurgePrompt(prompt) {
+  openConfirm({
+    title: `Delete "${prompt.title}" forever?`,
+    body: 'This can’t be undone.',
+    onConfirm: async () => {
+      try {
+        await api.purgePrompt(prompt.id);
+        showToast('Prompt deleted forever');
+      } catch (e) {
+        showToast(e.message || 'Delete failed');
+      }
+      openOverlay('trashModalOverlay');
+      await renderTrashList();
+    }
+  });
+}
+
 async function loadAndRender() {
   const data = await api.getData();
   state.folders = data.folders;
@@ -482,6 +624,28 @@ function init() {
     reader.onload = () => importFromJson(reader.result);
     reader.readAsText(file);
     e.target.value = '';
+  });
+
+  document.getElementById('trashBtn').addEventListener('click', () => {
+    toolsMenu.hidden = true;
+    openTrashModal();
+  });
+  document.getElementById('closeTrashModalBtn').addEventListener('click', () => closeOverlay('trashModalOverlay'));
+  document.getElementById('emptyTrashBtn').addEventListener('click', () => {
+    openConfirm({
+      title: 'Empty the recycle bin?',
+      body: 'Permanently deletes everything in the bin. This can’t be undone.',
+      onConfirm: async () => {
+        try {
+          await api.emptyTrash();
+          showToast('Recycle bin emptied');
+        } catch (e) {
+          showToast(e.message || 'Could not empty recycle bin');
+        }
+        openOverlay('trashModalOverlay');
+        await renderTrashList();
+      }
+    });
   });
 
   loadAndRender().catch((e) => showToast(e.message || 'Could not load prompts'));

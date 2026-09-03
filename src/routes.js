@@ -15,7 +15,7 @@ const EXTENSION_DIR = path.join(__dirname, '..', 'extension-shared');
 const SERVER_URL_PLACEHOLDER = '__DEFAULT_SERVER_URL__';
 
 function mapFolder(row) {
-  return { id: row.id, name: row.name, createdAt: row.created_at };
+  return { id: row.id, name: row.name, createdAt: row.created_at, deletedAt: row.deleted_at ?? null };
 }
 
 function mapPrompt(row) {
@@ -25,7 +25,8 @@ function mapPrompt(row) {
     title: row.title,
     text: row.text,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    deletedAt: row.deleted_at ?? null
   };
 }
 
@@ -65,8 +66,8 @@ router.get('/extension.zip', (req, res) => {
 
 // ---------- Combined data load ----------
 router.get('/api/data', (req, res) => {
-  const folders = db.prepare('SELECT * FROM folders ORDER BY created_at ASC').all().map(mapFolder);
-  const prompts = db.prepare('SELECT * FROM prompts ORDER BY created_at ASC').all().map(mapPrompt);
+  const folders = db.prepare('SELECT * FROM folders WHERE deleted_at IS NULL ORDER BY created_at ASC').all().map(mapFolder);
+  const prompts = db.prepare('SELECT * FROM prompts WHERE deleted_at IS NULL ORDER BY created_at ASC').all().map(mapPrompt);
   res.json({ folders, prompts });
 });
 
@@ -82,12 +83,14 @@ router.post('/api/folders', (req, res) => {
 });
 
 router.delete('/api/folders/:id', (req, res) => {
-  const folder = db.prepare('SELECT id FROM folders WHERE id = ?').get(req.params.id);
+  const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!folder) return res.status(404).json({ error: 'Folder not found' });
 
-  const { count } = db.prepare('SELECT COUNT(*) AS count FROM prompts WHERE folder_id = ?').get(req.params.id);
-  db.prepare('DELETE FROM folders WHERE id = ?').run(req.params.id);
-  res.json({ deletedPromptCount: count });
+  const now = Date.now();
+  db.prepare('UPDATE folders SET deleted_at = ? WHERE id = ?').run(now, req.params.id);
+  const { changes } = db.prepare('UPDATE prompts SET deleted_at = ? WHERE folder_id = ? AND deleted_at IS NULL')
+    .run(now, req.params.id);
+  res.json({ trashedPromptCount: changes });
 });
 
 // ---------- Prompts ----------
@@ -111,7 +114,7 @@ router.post('/api/prompts', (req, res) => {
 });
 
 router.put('/api/prompts/:id', (req, res) => {
-  const existing = db.prepare('SELECT * FROM prompts WHERE id = ?').get(req.params.id);
+  const existing = db.prepare('SELECT * FROM prompts WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Prompt not found' });
 
   const title = cleanString(req.body.title, TITLE_MAX);
@@ -132,15 +135,16 @@ router.put('/api/prompts/:id', (req, res) => {
 });
 
 router.delete('/api/prompts/:id', (req, res) => {
-  const result = db.prepare('DELETE FROM prompts WHERE id = ?').run(req.params.id);
+  const result = db.prepare('UPDATE prompts SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL')
+    .run(Date.now(), req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: 'Prompt not found' });
   res.status(204).end();
 });
 
 // ---------- Export / Import ----------
 router.get('/api/export', (req, res) => {
-  const folders = db.prepare('SELECT * FROM folders ORDER BY created_at ASC').all().map(mapFolder);
-  const prompts = db.prepare('SELECT * FROM prompts ORDER BY created_at ASC').all().map(mapPrompt);
+  const folders = db.prepare('SELECT * FROM folders WHERE deleted_at IS NULL ORDER BY created_at ASC').all().map(mapFolder);
+  const prompts = db.prepare('SELECT * FROM prompts WHERE deleted_at IS NULL ORDER BY created_at ASC').all().map(mapPrompt);
   res.json({ exportedAt: new Date().toISOString(), folders, prompts });
 });
 
@@ -148,7 +152,7 @@ router.post('/api/import', (req, res) => {
   const incomingFolders = Array.isArray(req.body.folders) ? req.body.folders : [];
   const incomingPrompts = Array.isArray(req.body.prompts) ? req.body.prompts : [];
 
-  const existingFolders = db.prepare('SELECT * FROM folders').all();
+  const existingFolders = db.prepare('SELECT * FROM folders WHERE deleted_at IS NULL').all();
   const folderIdMap = {};
   const insertFolder = db.prepare('INSERT INTO folders (id, name, created_at) VALUES (?, ?, ?)');
 
@@ -187,6 +191,65 @@ router.post('/api/import', (req, res) => {
   });
 
   res.json({ importedCount, folderCount });
+});
+
+// ---------- Recycle bin ----------
+router.get('/api/trash', (req, res) => {
+  const folders = db.prepare('SELECT * FROM folders WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC').all().map(mapFolder);
+  const prompts = db.prepare('SELECT * FROM prompts WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC').all().map(mapPrompt);
+  res.json({ folders, prompts });
+});
+
+router.post('/api/trash/folders/:id/restore', (req, res) => {
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ? AND deleted_at IS NOT NULL').get(req.params.id);
+  if (!folder) return res.status(404).json({ error: 'Folder not found in trash' });
+
+  db.prepare('UPDATE folders SET deleted_at = NULL WHERE id = ?').run(req.params.id);
+  // Only bring back prompts that were trashed in the same folder-delete
+  // action (same deleted_at stamp) - a prompt trashed separately, before
+  // the folder went to trash, stays in trash until restored on its own.
+  db.prepare('UPDATE prompts SET deleted_at = NULL WHERE folder_id = ? AND deleted_at = ?')
+    .run(req.params.id, folder.deleted_at);
+
+  res.json(mapFolder({ ...folder, deleted_at: null }));
+});
+
+router.post('/api/trash/prompts/:id/restore', (req, res) => {
+  const prompt = db.prepare('SELECT * FROM prompts WHERE id = ? AND deleted_at IS NOT NULL').get(req.params.id);
+  if (!prompt) return res.status(404).json({ error: 'Prompt not found in trash' });
+
+  db.prepare('UPDATE prompts SET deleted_at = NULL WHERE id = ?').run(req.params.id);
+  res.json(mapPrompt({ ...prompt, deleted_at: null }));
+});
+
+router.delete('/api/trash/folders/:id', (req, res) => {
+  const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND deleted_at IS NOT NULL').get(req.params.id);
+  if (!folder) return res.status(404).json({ error: 'Folder not found in trash' });
+
+  // Detach any prompt that was restored back out of this folder before the
+  // folder itself was restored, so purging the folder can't take a live,
+  // visible prompt down with it via the FK cascade below.
+  db.prepare('UPDATE prompts SET folder_id = NULL WHERE folder_id = ? AND deleted_at IS NULL').run(req.params.id);
+  db.prepare('DELETE FROM folders WHERE id = ?').run(req.params.id);
+  res.status(204).end();
+});
+
+router.delete('/api/trash/prompts/:id', (req, res) => {
+  const result = db.prepare('DELETE FROM prompts WHERE id = ? AND deleted_at IS NOT NULL').run(req.params.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Prompt not found in trash' });
+  res.status(204).end();
+});
+
+router.post('/api/trash/empty', (req, res) => {
+  // Same detach-then-delete safety as the single-folder purge above, so a
+  // prompt someone restored out of a still-trashed folder survives.
+  db.prepare(`
+    UPDATE prompts SET folder_id = NULL
+    WHERE deleted_at IS NULL AND folder_id IN (SELECT id FROM folders WHERE deleted_at IS NOT NULL)
+  `).run();
+  const deletedPromptCount = db.prepare('DELETE FROM prompts WHERE deleted_at IS NOT NULL').run().changes;
+  const deletedFolderCount = db.prepare('DELETE FROM folders WHERE deleted_at IS NOT NULL').run().changes;
+  res.json({ deletedFolderCount, deletedPromptCount });
 });
 
 module.exports = router;
