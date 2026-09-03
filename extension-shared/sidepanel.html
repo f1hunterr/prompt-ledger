@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Prompt Ledger</title>
+<link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+
+<div class="setup" id="setup">
+  <span class="seal">P</span>
+  <h1>Prompt Ledger</h1>
+  <p class="sub">Enter your team's Prompt Ledger server address to connect.</p>
+  <label class="field">
+    <span>Server URL</span>
+    <input id="urlInput" type="text" placeholder="http://192.168.1.50:3000" autocomplete="off" />
+  </label>
+  <p class="error" id="setupError" hidden></p>
+  <button class="btn" id="connectBtn" type="button">Connect</button>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <span class="bar__label" id="urlLabel"></span>
+  <button class="bar__btn" id="settingsBtn" title="Change server" type="button">⚙</button>
+</div>
+<iframe id="frame" hidden></iframe>
+
+<script src="sidepanel.js"></script>
+</body>
+</html>
