@@ -84,6 +84,57 @@ html, body {
   }
 }
 
+/* ---------- Standalone dashboard (direct browser visits only) ----------
+   html.standalone is added by app.js only when this page is NOT inside the
+   shared extension's iframe, so the panel view stays exactly as-is. Only
+   kicks in at desktop widths - a phone opening this URL directly still
+   gets the compact card above, which already works fine on small screens. */
+@media (min-width: 900px) {
+  html.standalone,
+  html.standalone body {
+    overflow: auto;
+    height: auto;
+  }
+  html.standalone .app {
+    max-width: 1200px;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0 auto;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  html.standalone .app__header { padding: 32px 32px 16px; }
+  html.standalone .search-row { max-width: 420px; margin: 2px 32px 18px; }
+  html.standalone .folder-rail { padding: 0 32px 18px; max-height: none; }
+  html.standalone .prompt-list {
+    flex: none;
+    overflow: visible;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    align-content: start;
+    gap: 14px;
+    padding: 2px 32px 110px;
+  }
+  html.standalone .prompt-card { height: 100%; }
+  html.standalone .empty-state { padding: 100px 32px; }
+  html.standalone .footer {
+    position: fixed;
+    right: 32px;
+    bottom: 28px;
+    left: auto;
+    width: auto;
+    padding: 0;
+    background: none;
+  }
+  html.standalone .fab {
+    width: auto;
+    padding: 13px 22px;
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(22,24,28,0.24);
+  }
+}
+
 /* ---------- Header ---------- */
 .app__header {
   display: flex;

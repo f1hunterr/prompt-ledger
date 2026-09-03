@@ -1,3 +1,12 @@
+// Visited directly in a browser tab vs. docked in the shared extension's
+// side panel (which loads this page inside an <iframe>). Only the direct
+// case gets the wide dashboard layout below - the extension's iframe view
+// is untouched, since window.top there is the extension's own panel, not
+// this window.
+if (window.self === window.top) {
+  document.documentElement.classList.add('standalone');
+}
+
 const TAB_COLORS = ['--tab-1', '--tab-2', '--tab-3', '--tab-4', '--tab-5', '--tab-6'];
 const ALL_FOLDER_ID = '__all__';
 const OVERLAY_IDS = ['promptModalOverlay', 'folderModalOverlay', 'confirmOverlay', 'extensionModalOverlay', 'trashModalOverlay'];
