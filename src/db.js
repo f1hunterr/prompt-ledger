@@ -39,10 +39,19 @@ function ensureColumn(table, column, type) {
 }
 ensureColumn('folders', 'deleted_at', 'INTEGER');
 ensureColumn('prompts', 'deleted_at', 'INTEGER');
+// "Delete forever" from the recycle bin, and emptying it, don't actually
+// remove the row - they just stamp purged_at. Nothing in the app or its API
+// ever shows a purged_at row again, but the data survives in the SQLite
+// file so it can still be pulled back with scripts/recover-purged.js if
+// someone empties the bin by mistake.
+ensureColumn('folders', 'purged_at', 'INTEGER');
+ensureColumn('prompts', 'purged_at', 'INTEGER');
 
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_folders_deleted_at ON folders(deleted_at);
   CREATE INDEX IF NOT EXISTS idx_prompts_deleted_at ON prompts(deleted_at);
+  CREATE INDEX IF NOT EXISTS idx_folders_purged_at ON folders(purged_at);
+  CREATE INDEX IF NOT EXISTS idx_prompts_purged_at ON prompts(purged_at);
 `);
 
 module.exports = { db, DATA_DIR };

@@ -44,7 +44,8 @@
 html, body {
   margin: 0;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden; /* .app is a full-viewport shell; only its own panels scroll */
   background: var(--surface-sunken);
   color: var(--ink);
   font-family: var(--font-ui);
@@ -52,24 +53,35 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-body { min-height: 100vh; }
-
-/* ---------- Page shell (web app: center a panel instead of filling a side panel) ---------- */
+/* ---------- Page shell (web app: center a panel instead of filling a side panel) ----------
+   height is set twice on purpose: 100vh first for browsers that don't know
+   100dvh, then 100dvh to override it where supported. dvh tracks the real
+   visible viewport (accounts for mobile browser chrome showing/hiding),
+   where plain vh can leave a gap or force scroll on some phones/embeds.
+   No max-height cap here - one was tried before and, on any viewport taller
+   than the cap, left the extra space stranded below the card (uncentered),
+   which is the "huge gap at the bottom" bug. Filling the full viewport at
+   every size avoids that regardless of display. */
 .app {
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 480px;
   height: 100vh;
-  max-height: 860px;
+  height: 100dvh;
   margin: 0 auto;
   position: relative;
   background: var(--paper);
   box-shadow: 0 24px 60px rgba(22,20,16,0.14);
 }
 @media (min-width: 560px) {
-  html, body { height: auto; min-height: 100vh; }
-  .app { margin: 24px auto; border-radius: var(--radius-lg); overflow: hidden; height: calc(100vh - 48px); }
+  .app {
+    margin: 24px auto;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    height: calc(100vh - 48px);
+    height: calc(100dvh - 48px);
+  }
 }
 
 /* ---------- Header ---------- */

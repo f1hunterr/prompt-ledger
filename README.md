@@ -54,6 +54,27 @@ build step, no extra services). Defaults to port 3000, override with
 All plain JSON, no auth headers required. `GET /extension.zip` serves
 the shared extension below, pre-configured with this server's address.
 
+### Emergency recovery
+
+"Delete forever" and "Empty recycle bin" don't actually erase anything
+server-side — they stamp the row `purged_at` and every normal query
+(app, trash view, export) filters it out from there, but the row is
+still sitting in `data/db.sqlite`. There's deliberately no button or API
+route for undoing that (this app has no login, so anything reachable
+from the browser is reachable by anyone) — recovery is a script you run
+with shell access to the server:
+
+```
+docker compose exec prompt-ledger node scripts/recover-purged.js list
+docker compose exec prompt-ledger node scripts/recover-purged.js restore prompt <id>
+docker compose exec prompt-ledger node scripts/recover-purged.js restore folder <id>
+```
+
+(Drop the `docker compose exec prompt-ledger` prefix if you're running
+`node server.js` directly instead of in Docker.) `restore` only clears
+`purged_at` — the item lands back in the normal Recycle bin, one more
+restore away from being visible in the library again.
+
 ## Shared side-panel extension — install (~30 seconds, no typing)
 
 Docks your team's hosted web app into Chrome's side panel. It's a thin
@@ -112,8 +133,9 @@ Web app / shared extension only:
 - Deleting a folder or prompt moves it to the **Recycle bin** (⋯ menu)
   instead of destroying it right away. From there you can **restore** it
   or **delete forever**. Restoring a folder also restores whatever
-  prompts were in it when it was deleted. Emptying the bin, or deleting
-  something forever from it, can't be undone.
+  prompts were in it when it was deleted. Nobody can undo "delete
+  forever" or "empty bin" from inside the app — see **Emergency
+  recovery** below if that happens by mistake.
 
 Offline extension only:
 

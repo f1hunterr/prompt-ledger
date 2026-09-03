@@ -194,28 +194,35 @@ router.post('/api/import', (req, res) => {
 });
 
 // ---------- Recycle bin ----------
+// "Delete forever" / "Empty" below never run a real SQL DELETE - they stamp
+// purged_at, which every query here filters out just like a normal delete.
+// The rows physically stay in the SQLite file; recovering one after the
+// fact is only possible via scripts/recover-purged.js run directly on the
+// server, not through any API route - there's no login on this app, so an
+// exposed "un-purge" endpoint would be recoverable by anyone, not just
+// whoever manages the deployment.
 router.get('/api/trash', (req, res) => {
-  const folders = db.prepare('SELECT * FROM folders WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC').all().map(mapFolder);
-  const prompts = db.prepare('SELECT * FROM prompts WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC').all().map(mapPrompt);
+  const folders = db.prepare('SELECT * FROM folders WHERE deleted_at IS NOT NULL AND purged_at IS NULL ORDER BY deleted_at DESC').all().map(mapFolder);
+  const prompts = db.prepare('SELECT * FROM prompts WHERE deleted_at IS NOT NULL AND purged_at IS NULL ORDER BY deleted_at DESC').all().map(mapPrompt);
   res.json({ folders, prompts });
 });
 
 router.post('/api/trash/folders/:id/restore', (req, res) => {
-  const folder = db.prepare('SELECT * FROM folders WHERE id = ? AND deleted_at IS NOT NULL').get(req.params.id);
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ? AND deleted_at IS NOT NULL AND purged_at IS NULL').get(req.params.id);
   if (!folder) return res.status(404).json({ error: 'Folder not found in trash' });
 
   db.prepare('UPDATE folders SET deleted_at = NULL WHERE id = ?').run(req.params.id);
   // Only bring back prompts that were trashed in the same folder-delete
   // action (same deleted_at stamp) - a prompt trashed separately, before
   // the folder went to trash, stays in trash until restored on its own.
-  db.prepare('UPDATE prompts SET deleted_at = NULL WHERE folder_id = ? AND deleted_at = ?')
+  db.prepare('UPDATE prompts SET deleted_at = NULL WHERE folder_id = ? AND deleted_at = ? AND purged_at IS NULL')
     .run(req.params.id, folder.deleted_at);
 
   res.json(mapFolder({ ...folder, deleted_at: null }));
 });
 
 router.post('/api/trash/prompts/:id/restore', (req, res) => {
-  const prompt = db.prepare('SELECT * FROM prompts WHERE id = ? AND deleted_at IS NOT NULL').get(req.params.id);
+  const prompt = db.prepare('SELECT * FROM prompts WHERE id = ? AND deleted_at IS NOT NULL AND purged_at IS NULL').get(req.params.id);
   if (!prompt) return res.status(404).json({ error: 'Prompt not found in trash' });
 
   db.prepare('UPDATE prompts SET deleted_at = NULL WHERE id = ?').run(req.params.id);
@@ -223,32 +230,37 @@ router.post('/api/trash/prompts/:id/restore', (req, res) => {
 });
 
 router.delete('/api/trash/folders/:id', (req, res) => {
-  const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND deleted_at IS NOT NULL').get(req.params.id);
+  const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND deleted_at IS NOT NULL AND purged_at IS NULL').get(req.params.id);
   if (!folder) return res.status(404).json({ error: 'Folder not found in trash' });
 
+  const now = Date.now();
   // Detach any prompt that was restored back out of this folder before the
   // folder itself was restored, so purging the folder can't take a live,
-  // visible prompt down with it via the FK cascade below.
+  // visible prompt down with it.
   db.prepare('UPDATE prompts SET folder_id = NULL WHERE folder_id = ? AND deleted_at IS NULL').run(req.params.id);
-  db.prepare('DELETE FROM folders WHERE id = ?').run(req.params.id);
+  db.prepare('UPDATE prompts SET purged_at = ? WHERE folder_id = ? AND deleted_at IS NOT NULL AND purged_at IS NULL')
+    .run(now, req.params.id);
+  db.prepare('UPDATE folders SET purged_at = ? WHERE id = ?').run(now, req.params.id);
   res.status(204).end();
 });
 
 router.delete('/api/trash/prompts/:id', (req, res) => {
-  const result = db.prepare('DELETE FROM prompts WHERE id = ? AND deleted_at IS NOT NULL').run(req.params.id);
+  const result = db.prepare('UPDATE prompts SET purged_at = ? WHERE id = ? AND deleted_at IS NOT NULL AND purged_at IS NULL')
+    .run(Date.now(), req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: 'Prompt not found in trash' });
   res.status(204).end();
 });
 
 router.post('/api/trash/empty', (req, res) => {
-  // Same detach-then-delete safety as the single-folder purge above, so a
-  // prompt someone restored out of a still-trashed folder survives.
+  const now = Date.now();
+  // Same detach-first safety as the single-folder purge above, so a prompt
+  // someone restored out of a still-trashed folder survives.
   db.prepare(`
     UPDATE prompts SET folder_id = NULL
-    WHERE deleted_at IS NULL AND folder_id IN (SELECT id FROM folders WHERE deleted_at IS NOT NULL)
+    WHERE deleted_at IS NULL AND folder_id IN (SELECT id FROM folders WHERE deleted_at IS NOT NULL AND purged_at IS NULL)
   `).run();
-  const deletedPromptCount = db.prepare('DELETE FROM prompts WHERE deleted_at IS NOT NULL').run().changes;
-  const deletedFolderCount = db.prepare('DELETE FROM folders WHERE deleted_at IS NOT NULL').run().changes;
+  const deletedPromptCount = db.prepare('UPDATE prompts SET purged_at = ? WHERE deleted_at IS NOT NULL AND purged_at IS NULL').run(now).changes;
+  const deletedFolderCount = db.prepare('UPDATE folders SET purged_at = ? WHERE deleted_at IS NOT NULL AND purged_at IS NULL').run(now).changes;
   res.json({ deletedFolderCount, deletedPromptCount });
 });
 
