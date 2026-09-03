@@ -48,24 +48,31 @@ build step, no extra services). Defaults to port 3000, override with
 `GET /health`, `GET /api/data`, `GET/POST /api/folders`,
 `DELETE /api/folders/:id`, `GET/POST /api/prompts`,
 `PUT/DELETE /api/prompts/:id`, `GET /api/export`, `POST /api/import`.
-All plain JSON, no auth headers required.
+All plain JSON, no auth headers required. `GET /extension.zip` serves
+the shared extension below, pre-configured with this server's address.
 
-## Shared side-panel extension — install (unpacked, ~30 seconds)
+## Shared side-panel extension — install (~30 seconds, no typing)
 
-Docks your team's hosted web app into Chrome's side panel. Each teammate
-installs this once and points it at your server; it's a thin wrapper —
-no separate data, no login, same shared library as the web app.
+Docks your team's hosted web app into Chrome's side panel. It's a thin
+wrapper — no separate data, no login, same shared library as the web app.
 
-1. Open `chrome://extensions` in Chrome.
-2. Turn on **Developer mode** (top-right toggle).
-3. Click **Load unpacked** and select the `extension-shared` folder from
-   this repo.
-4. Click the extension icon in the toolbar to open the side panel. Pin it
-   via the puzzle-piece icon for one-click access.
-5. First time only: enter your server's address (e.g.
-   `http://192.168.1.50:3000`) and click **Connect**. It's saved via
-   Chrome sync, so it carries over to your other signed-in Chrome
-   browsers. Click the ⚙ in the panel's top bar any time to change it.
+Chrome won't let a webpage install an extension automatically (that's a
+deliberate browser security limit — no site can silently add itself to
+your browser), so **Load unpacked** is still the install step. What *is*
+automatic: the download is pre-configured with your server's address, so
+there's nothing to type in.
+
+1. In the web app, open the **⋯ menu → Get Chrome extension**, then
+   **Download extension (.zip)**. (Or grab `extension-shared/` from this
+   repo directly — that copy will ask for a server address on first run
+   instead.)
+2. Unzip it.
+3. Open `chrome://extensions` in Chrome.
+4. Turn on **Developer mode** (top-right toggle).
+5. Click **Load unpacked** and select the unzipped folder.
+6. Click the toolbar icon — it opens already connected. Pin it via the
+   puzzle-piece icon for one-click access. Click the ⚙ in the panel's top
+   bar any time to point it at a different server.
 
 ## Offline extension — install (unpacked, ~30 seconds)
 

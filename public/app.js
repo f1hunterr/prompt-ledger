@@ -1,6 +1,6 @@
 const TAB_COLORS = ['--tab-1', '--tab-2', '--tab-3', '--tab-4', '--tab-5', '--tab-6'];
 const ALL_FOLDER_ID = '__all__';
-const OVERLAY_IDS = ['promptModalOverlay', 'folderModalOverlay', 'confirmOverlay'];
+const OVERLAY_IDS = ['promptModalOverlay', 'folderModalOverlay', 'confirmOverlay', 'extensionModalOverlay'];
 const CLOSE_ANIM_MS = 150;
 
 let state = {
@@ -460,6 +460,12 @@ function init() {
   });
   document.addEventListener('click', () => { toolsMenu.hidden = true; });
   toolsMenu.addEventListener('click', (e) => e.stopPropagation());
+
+  document.getElementById('getExtensionBtn').addEventListener('click', () => {
+    toolsMenu.hidden = true;
+    openOverlay('extensionModalOverlay');
+  });
+  document.getElementById('closeExtensionModalBtn').addEventListener('click', () => closeOverlay('extensionModalOverlay'));
 
   document.getElementById('exportAllBtn').addEventListener('click', () => {
     exportAll();

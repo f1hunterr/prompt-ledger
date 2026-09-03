@@ -37,6 +37,7 @@
       </button>
     </div>
     <div class="menu" id="toolsMenu" hidden>
+      <button id="getExtensionBtn">Get Chrome extension</button>
       <button id="exportAllBtn">Export all as JSON</button>
       <button id="importBtn">Import JSON</button>
       <input type="file" id="importFile" accept="application/json" hidden />
@@ -120,6 +121,27 @@
     <div class="modal-actions">
       <button class="btn btn--ghost" id="confirmCancelBtn">Cancel</button>
       <button class="btn btn--danger" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Get Chrome extension -->
+<div class="modal-overlay" id="extensionModalOverlay" hidden>
+  <div class="modal">
+    <div class="modal__head">
+      <h2>Get the Chrome extension</h2>
+      <button class="icon-btn" id="closeExtensionModalBtn"><svg width="15" height="15"><use href="#i-close"/></svg></button>
+    </div>
+    <p class="modal__body-text">Docks this library into Chrome's side panel. The download below is already configured to connect here — no server address to type in.</p>
+    <ol class="ext-steps">
+      <li>Download the extension, then unzip it.</li>
+      <li>Open <code>chrome://extensions</code> in Chrome.</li>
+      <li>Turn on <strong>Developer mode</strong> (top-right toggle).</li>
+      <li>Click <strong>Load unpacked</strong> and select the unzipped folder.</li>
+      <li>Click the toolbar icon — it opens already connected.</li>
+    </ol>
+    <div class="modal-actions">
+      <a class="btn btn--primary" id="downloadExtensionBtn" href="/extension.zip" download>Download extension (.zip)</a>
     </div>
   </div>
 </div>

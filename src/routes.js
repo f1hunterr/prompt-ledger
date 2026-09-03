@@ -1,5 +1,8 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
+const archiver = require('archiver');
 const { db } = require('./db');
 
 const router = express.Router();
@@ -7,6 +10,9 @@ const router = express.Router();
 const TITLE_MAX = 200;
 const TEXT_MAX = 50000;
 const NAME_MAX = 200;
+
+const EXTENSION_DIR = path.join(__dirname, '..', 'extension-shared');
+const SERVER_URL_PLACEHOLDER = '__DEFAULT_SERVER_URL__';
 
 function mapFolder(row) {
   return { id: row.id, name: row.name, createdAt: row.created_at };
@@ -36,6 +42,25 @@ router.get('/health', (req, res) => {
   } catch (e) {
     res.status(500).json({ status: 'error' });
   }
+});
+
+// ---------- Pre-configured Chrome extension download ----------
+router.get('/extension.zip', (req, res) => {
+  const origin = `${req.protocol}://${req.get('host')}`;
+  const sidepanelJs = fs
+    .readFileSync(path.join(EXTENSION_DIR, 'sidepanel.js'), 'utf8')
+    .replace(SERVER_URL_PLACEHOLDER, origin);
+
+  res.attachment('prompt-ledger-extension.zip');
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  archive.on('error', (err) => {
+    console.error('extension.zip build failed:', err);
+    res.status(500).end();
+  });
+  archive.pipe(res);
+  archive.glob('**/*', { cwd: EXTENSION_DIR, ignore: ['sidepanel.js'] });
+  archive.append(sidepanelJs, { name: 'sidepanel.js' });
+  archive.finalize();
 });
 
 // ---------- Combined data load ----------
