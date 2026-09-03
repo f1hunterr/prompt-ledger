@@ -1,0 +1,13 @@
+services:
+  prompt-ledger:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+    volumes:
+      # Host ./data must be writable by uid/gid 1000 (the "node" user in the
+      # image) — e.g. `mkdir -p data && chown 1000:1000 data` before first run,
+      # otherwise the container fails with EACCES on the SQLite file.
+      - ./data:/app/data

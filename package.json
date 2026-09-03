@@ -1,0 +1,19 @@
+{
+  "name": "prompt-ledger-server",
+  "version": "1.0.0",
+  "description": "Self-hosted, shared web app for Prompt Ledger",
+  "private": true,
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  }
+}

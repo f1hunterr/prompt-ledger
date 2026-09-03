@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Prompt Ledger</title>
+<link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+
+<!-- Icon sprite -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-search" viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M13 13l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 20 20"><rect x="6.5" y="6.5" width="9" height="9" rx="1.2" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 13.5V5.3A1.3 1.3 0 015.8 4h8.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-download" viewBox="0 0 20 20"><path d="M10 3v9m0 0l-3.2-3.2M10 12l3.2-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14.5v1.3A1.2 1.2 0 005.2 17h9.6a1.2 1.2 0 001.2-1.2v-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-share" viewBox="0 0 20 20"><circle cx="15" cy="5" r="2" stroke="currentColor" stroke-width="1.4"/><circle cx="5" cy="10" r="2" stroke="currentColor" stroke-width="1.4"/><circle cx="15" cy="15" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M6.7 9l6.6-3.2M6.7 11l6.6 3.2" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 20 20"><path d="M12.9 3.9l3.2 3.2L6.7 16.4l-3.6.8.8-3.6z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 20 20"><path d="M4.5 6h11M8 6V4.6A1.1 1.1 0 019.1 3.5h1.8A1.1 1.1 0 0112 4.6V6m-6.5 0l.6 9.4A1.2 1.2 0 007.3 16.5h5.4a1.2 1.2 0 001.2-1.1L14.5 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-more" viewBox="0 0 20 20"><circle cx="10" cy="4.5" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="15.5" r="1.3" fill="currentColor"/></symbol>
+</svg>
+
+<div class="app" id="app">
+
+  <header class="app__header">
+    <div class="brand">
+      <span class="brand__seal">P</span>
+      <div class="brand__text">
+        <h1>Prompt Ledger</h1>
+        <p id="brandSub">0 prompts</p>
+      </div>
+    </div>
+    <div class="header__actions">
+      <button class="icon-btn" id="menuBtn" aria-label="Tools">
+        <svg width="17" height="17"><use href="#i-more"/></svg>
+      </button>
+      <button class="icon-btn" id="closePanelBtn" aria-label="Close panel">
+        <svg width="17" height="17"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="menu" id="toolsMenu" hidden>
+      <button id="exportAllBtn">Export all as JSON</button>
+      <button id="importBtn">Import JSON</button>
+      <input type="file" id="importFile" accept="application/json" hidden />
+    </div>
+  </header>
+
+  <div class="search-row">
+    <svg width="15" height="15" class="search-row__icon"><use href="#i-search"/></svg>
+    <input id="searchInput" type="text" placeholder="Search prompts" autocomplete="off" />
+  </div>
+
+  <nav class="folder-rail" id="folderRail"></nav>
+
+  <main class="prompt-list" id="promptList"></main>
+
+  <div class="empty-state" id="emptyState" hidden>
+    <p class="empty-state__title">Nothing here yet</p>
+    <p class="empty-state__body">Add a client folder, then save your first prompt into it.</p>
+  </div>
+
+  <div class="footer">
+    <button class="fab" id="addPromptBtn">
+      <svg width="15" height="15"><use href="#i-plus"/></svg>
+      New prompt
+    </button>
+  </div>
+</div>
+
+<!-- Add / edit prompt -->
+<div class="modal-overlay" id="promptModalOverlay" hidden>
+  <div class="modal">
+    <div class="modal__head">
+      <h2 id="promptModalTitle">New prompt</h2>
+      <button class="icon-btn" id="closePromptModalBtn"><svg width="15" height="15"><use href="#i-close"/></svg></button>
+    </div>
+    <label class="field">
+      <span>Title</span>
+      <input id="promptTitleInput" type="text" placeholder="e.g. Product silo render brief" />
+    </label>
+    <label class="field">
+      <span>Client folder</span>
+      <select id="promptFolderSelect"></select>
+    </label>
+    <label class="field">
+      <span>Prompt</span>
+      <textarea id="promptTextInput" rows="7" placeholder="Paste or write the prompt text..."></textarea>
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn--ghost" id="cancelPromptBtn">Cancel</button>
+      <button class="btn btn--primary" id="savePromptBtn">Save prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add folder -->
+<div class="modal-overlay" id="folderModalOverlay" hidden>
+  <div class="modal modal--sm">
+    <div class="modal__head">
+      <h2>New client folder</h2>
+      <button class="icon-btn" id="closeFolderModalBtn"><svg width="15" height="15"><use href="#i-close"/></svg></button>
+    </div>
+    <label class="field">
+      <span>Client name</span>
+      <input id="folderNameInput" type="text" placeholder="e.g. Lowe's" />
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn--ghost" id="cancelFolderBtn">Cancel</button>
+      <button class="btn btn--primary" id="saveFolderBtn">Create folder</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic confirm -->
+<div class="modal-overlay" id="confirmOverlay" hidden>
+  <div class="modal modal--sm">
+    <div class="modal__head">
+      <h2 id="confirmTitle">Delete this?</h2>
+      <button class="icon-btn" id="closeConfirmModalBtn"><svg width="15" height="15"><use href="#i-close"/></svg></button>
+    </div>
+    <p class="modal__body-text" id="confirmBody"></p>
+    <div class="modal-actions">
+      <button class="btn btn--ghost" id="confirmCancelBtn">Cancel</button>
+      <button class="btn btn--danger" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="sidepanel.js"></script>
+</body>
+</html>
